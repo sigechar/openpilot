@@ -177,6 +177,9 @@ def setup_quectel(diag: ModemDiag) -> bool:
     at_cmd(f"AT+QGPSXTRATIME=0,\"{time_str}\",1,1,1000")
 
   at_cmd("AT+QGPSCFG=\"outport\",\"usbnmea\"")
+  # BluePilot: enable all GNSS constellations (GPS+GLONASS+Galileo+BeiDou) for reliable position fixes
+  at_cmd("AT+QGPSCFG=\"gnssconfig\",4")
+  # End BluePilot
   at_cmd("AT+QGPS=1")
 
   # enable OEMDRE mode
