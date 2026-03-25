@@ -18,23 +18,23 @@ from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.lib.application import MousePos
 from bluepilot.ui.lib.colors import BPColors
 
-# Layout constants (matching Qt)
-HEADER_HEIGHT = 130
-CONTENT_MARGIN = 40
-SECTION_SPACING = 30
-FRAME_PADDING = 15
+# Layout constants
+HEADER_HEIGHT = 170
+CONTENT_MARGIN = 50
+SECTION_SPACING = 36
+FRAME_PADDING = 22
 FRAME_RADIUS = 15
 BADGE_RADIUS = 20
-BADGE_PAD_X = 24
-BADGE_PAD_Y = 12
+BADGE_PAD_X = 30
+BADGE_PAD_Y = 16
 
 # Font sizes
-TITLE_FONT_SIZE = 42
-CATEGORY_TITLE_SIZE = 34
-ITEM_FONT_SIZE = 30
-BADGE_FONT_SIZE = 38
-AGNOS_FONT_SIZE = 32
-CLOSE_FONT_SIZE = 36
+TITLE_FONT_SIZE = 72
+CATEGORY_TITLE_SIZE = 58
+ITEM_FONT_SIZE = 48
+BADGE_FONT_SIZE = 58
+AGNOS_FONT_SIZE = 50
+CLOSE_FONT_SIZE = 50
 
 # Category definitions: (json_key, display_title, color)
 CATEGORIES = [
@@ -46,9 +46,9 @@ CATEGORIES = [
 
 _BP_ROOT = os.path.join(os.path.dirname(__file__), '../../..')
 
-CLOSE_CIRCLE_RADIUS = 32
-CLOSE_X_SIZE = 14
-CLOSE_X_WIDTH = 4
+CLOSE_CIRCLE_RADIUS = 40
+CLOSE_X_SIZE = 18
+CLOSE_X_WIDTH = 5
 
 
 class _CloseButton(Widget):

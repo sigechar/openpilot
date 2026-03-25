@@ -39,11 +39,11 @@ class TimeSeriesGraph(Widget):
   """Reusable time-series graph widget for debug panels."""
 
   # Layout constants
-  TOP_MARGIN = 40
+  TOP_MARGIN = 58
   BOTTOM_MARGIN = 15
-  SIDE_MARGIN = 55
-  TIME_LABELS_HEIGHT = 28
-  LEGEND_ROW_HEIGHT = 32
+  SIDE_MARGIN = 85
+  TIME_LABELS_HEIGHT = 46
+  LEGEND_ROW_HEIGHT = 48
   LEGEND_GAP = 8
   MIN_GRAPH_HEIGHT = 80
 
@@ -112,7 +112,7 @@ class TimeSeriesGraph(Widget):
 
     # Draw title
     rl.draw_text_ex(self._font_bold, self._config.title,
-                    rl.Vector2(graph_x, rect.y + 8), 30, 0,
+                    rl.Vector2(graph_x, rect.y + 8), 52, 0,
                     DebugColors.SCALE_TEXT)
 
     # Draw graph area background
@@ -198,12 +198,12 @@ class TimeSeriesGraph(Widget):
       # Time label
       label = "Now" if i == 0 else f"-{i}s"
       rl.draw_text_ex(self._font_normal, label,
-                      rl.Vector2(x - 10, labels_y), 22, 0, DebugColors.LEGEND_TEXT)
+                      rl.Vector2(x - 10, labels_y), 40, 0, DebugColors.LEGEND_TEXT)
 
   def _draw_scale(self, rect: rl.Rectangle, gx: int, gy: int, gh: int, zero_y: int):
     """Draw Y-axis scale labels."""
     scale_x = int(rect.x + 4)
-    font_size = 22
+    font_size = 40
 
     if self._config.zero_at_bottom:
       # 0-1 range
@@ -276,7 +276,7 @@ class TimeSeriesGraph(Widget):
 
   def _draw_legend(self, gx: int, gw: int, legend_y: int, rect: rl.Rectangle):
     """Draw the legend with color swatches, labels, and current values."""
-    font_size = 24
+    font_size = 40
     col_width = gw // 3
 
     all_items = []

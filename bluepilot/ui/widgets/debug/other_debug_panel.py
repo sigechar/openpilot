@@ -19,8 +19,8 @@ from bluepilot.ui.widgets.debug.debug_colors import DebugColors
 class DebugDataCard(Widget):
   """A card displaying a titled group of label-value rows."""
 
-  HEADER_HEIGHT = 36
-  ROW_HEIGHT = 30
+  HEADER_HEIGHT = 58
+  ROW_HEIGHT = 48
   PADDING = 14
   CARD_RADIUS = 0.06
 
@@ -54,8 +54,8 @@ class DebugDataCard(Widget):
 
     # Header title
     rl.draw_text_ex(self._font_bold, self._title,
-                    rl.Vector2(rect.x + self.PADDING, rect.y + 8),
-                    26, 0, self._accent_color)
+                    rl.Vector2(rect.x + self.PADDING, rect.y + 10),
+                    48, 0, self._accent_color)
 
     # Separator line under header
     sep_y = rect.y + self.HEADER_HEIGHT
@@ -69,12 +69,12 @@ class DebugDataCard(Widget):
       # Label on left
       rl.draw_text_ex(self._font_normal, label,
                       rl.Vector2(rect.x + self.PADDING, y),
-                      22, 0, DebugColors.LEGEND_LABEL)
+                      40, 0, DebugColors.LEGEND_LABEL)
       # Value on right
-      val_size = measure_text_cached(self._font_semi, value, 22)
+      val_size = measure_text_cached(self._font_semi, value, 40)
       rl.draw_text_ex(self._font_semi, value,
                       rl.Vector2(rect.x + rect.width - self.PADDING - val_size.x, y),
-                      22, 0, DebugColors.LEGEND_TEXT)
+                      40, 0, DebugColors.LEGEND_TEXT)
       y += self.ROW_HEIGHT
 
 
@@ -167,7 +167,7 @@ def _decode_fw_version(fw_version) -> str:
 class OtherDebugPanel(Widget):
   """Vehicle/device data panel with 5 sub-tabs rendered as scrollable card lists."""
 
-  SUB_TAB_HEIGHT = 50
+  SUB_TAB_HEIGHT = 66
 
   def __init__(self):
     super().__init__()
@@ -580,7 +580,7 @@ class OtherDebugPanel(Widget):
     total_spacing = (tab_count - 1) * tab_spacing
     available_w = rect.width - 20  # 10px padding on each side
     tab_w = (available_w - total_spacing) / tab_count
-    tab_h = 36
+    tab_h = 52
     tab_y = rect.y + (self.SUB_TAB_HEIGHT - tab_h) / 2
 
     for i, label in enumerate(SUB_TAB_LABELS):
@@ -596,11 +596,11 @@ class OtherDebugPanel(Widget):
         rl.draw_rectangle_rounded_lines_ex(tab_rect, 0.4, 8, 1.0, DebugColors.TAB_BORDER)
 
       # Center text
-      text_size = measure_text_cached(self._font_semi, label, 22)
+      text_size = measure_text_cached(self._font_semi, label, 40)
       text_x = tab_x + (tab_w - text_size.x) / 2
       text_y = tab_y + (tab_h - text_size.y) / 2
       rl.draw_text_ex(self._font_semi, label,
-                      rl.Vector2(text_x, text_y), 22, 0, text_color)
+                      rl.Vector2(text_x, text_y), 40, 0, text_color)
 
       # Click detection via mouse events
       for mouse_event in gui_app.mouse_events:

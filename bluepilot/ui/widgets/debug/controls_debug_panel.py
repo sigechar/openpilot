@@ -133,11 +133,11 @@ class ControlsDebugPanel(Widget):
     rl.draw_rectangle_rounded_lines_ex(close_rect, 0.3, 8, 1.5, DebugColors.CLOSE_BORDER)
 
     close_text = "X"
-    close_text_size = measure_text_cached(self._font_bold, close_text, 28)
+    close_text_size = measure_text_cached(self._font_bold, close_text, 46)
     rl.draw_text_ex(self._font_bold, close_text,
                     rl.Vector2(close_x + (close_w - close_text_size.x) / 2,
                                tab_y + (tab_h - close_text_size.y) / 2),
-                    28, 0, DebugColors.LEGEND_TEXT)
+                    46, 0, DebugColors.LEGEND_TEXT)
 
     for mouse_event in gui_app.mouse_events:
       if mouse_event.left_released:
@@ -163,11 +163,11 @@ class ControlsDebugPanel(Widget):
         rl.draw_rectangle_rounded_lines_ex(tab_rect, 0.3, 8, 1.0, DebugColors.TAB_BORDER)
 
       # Center text
-      text_size = measure_text_cached(self._font_semi, label, 26)
+      text_size = measure_text_cached(self._font_semi, label, 46)
       text_x = tab_x + (tab_w - text_size.x) / 2
       text_y_pos = tab_y + (tab_h - text_size.y) / 2
       rl.draw_text_ex(self._font_semi, label,
-                      rl.Vector2(text_x, text_y_pos), 26, 0, text_color)
+                      rl.Vector2(text_x, text_y_pos), 46, 0, text_color)
 
       # Click detection
       for mouse_event in gui_app.mouse_events:
