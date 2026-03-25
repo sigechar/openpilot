@@ -40,7 +40,7 @@ class AlertRendererBP(AlertRenderer):
     # mici/onroad/alert_renderer.py). Calling super()._render for non-informational alerts would
     # duplicate this and double-decrement the timer.
     if gui_app.sunnypilot_ui():
-      ui_state.onroad_brightness_handle_alerts(ui_state.started, alert)
+      ui_state.onroad_brightness_handle_alerts(ui_state, alert)
 
     if not alert:
       return
