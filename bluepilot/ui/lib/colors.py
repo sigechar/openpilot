@@ -59,6 +59,8 @@ class BPColors:
   CHANGES_HEADER_BG = rl.Color(32, 32, 32, 255)     # #202020 - Header bg
   CHANGES_TEXT = rl.Color(228, 228, 228, 255)        # #E4E4E4 - Item text
   CHANGES_AGNOS = rl.Color(156, 39, 176, 255)       # #9C27B0 - AGNOS badge
+  BADGE_C3X = rl.Color(0, 188, 212, 255)             # #00BCD4 - Cyan/teal for C3X
+  BADGE_C4 = rl.Color(255, 179, 0, 255)              # #FFB300 - Amber/gold for C4
 
   # Onroad border colors
   BORDER_DISENGAGED = rl.Color(0x17, 0x33, 0x49, 0xC8)  # Blue
