@@ -26,6 +26,11 @@ class HudRendererBP(HudRendererSP):
     self.speed_right = 0
     self._gradient_rect = None  # BluePilot: Full-width rect for header gradient
 
+    # BluePilot: Cache params to avoid per-frame disk I/O (refresh every ~60 frames)
+    self._param_counter = 0
+    self._show_brake_status = self._bp_params.get_bool("ShowBrakeStatus")
+    self._hide_v_ego_ui = self._bp_params.get_bool("HideVEgoUI")
+
   def set_gradient_rect(self, rect: rl.Rectangle):
     """Set full-width rect for header gradient (when HUD renders offset for confidence ball)."""
     self._gradient_rect = rect
@@ -36,8 +41,15 @@ class HudRendererBP(HudRendererSP):
   def _update_state(self) -> None:
     super()._update_state()
 
+    # BluePilot: Refresh cached params periodically (~1s at 20fps)
+    self._param_counter += 1
+    if self._param_counter >= 60:
+      self._param_counter = 0
+      self._show_brake_status = self._bp_params.get_bool("ShowBrakeStatus")
+      self._hide_v_ego_ui = self._bp_params.get_bool("HideVEgoUI")
+
     # Check brake status if enabled
-    if self._bp_params.get_bool("ShowBrakeStatus"):
+    if self._show_brake_status:
       sm = ui_state.sm
       if sm.valid['carStateBP']:
         try:
@@ -83,8 +95,7 @@ class HudRendererBP(HudRendererSP):
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
     """Override to add brake status red coloring and track speed_right."""
     # BluePilot: Respect "Speedometer: Hide from Onroad Screen" (HideVEgoUI) from Visuals.
-    # Read param directly for immediate response (ui_state.hide_v_ego_ui refreshes every 5s).
-    if self._bp_params.get_bool("HideVEgoUI"):
+    if self._hide_v_ego_ui:
       self.speed_right = 0
       return
     speed_text = str(round(self.speed))

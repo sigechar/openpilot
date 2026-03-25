@@ -22,15 +22,26 @@ class BlindspotRendererMixin:
     self._blindspot_left_alpha_filter = FirstOrderFilter(0.0, 0.15, 1 / gui_app.target_fps)
     self._blindspot_right_alpha_filter = FirstOrderFilter(0.0, 0.15, 1 / gui_app.target_fps)
     self._blindspot_pulse_start_time = time.monotonic()
+    # BluePilot: Cache param to avoid per-frame disk I/O (refresh every ~60 frames)
+    self._blindspot_param_counter = 0
+    try:
+      self._show_blindspot_overlay = self._blindspot_params.get_bool("ShowBlindspotOverlay")
+    except UnknownKeyName:
+      self._show_blindspot_overlay = False
 
   def _draw_blindspot_screen_edges(self, rect: rl.Rectangle, blind_spot_width: int = 250):
     """Draw blindspot screen edge indicators - red gradient edge with pulsing animation."""
-    # BluePilot-only toggle: ShowBlindspotOverlay controls this overlay (decoupled from SunnyPilot BlindSpot).
-    try:
-      if not self._blindspot_params.get_bool("ShowBlindspotOverlay"):
-        return
-    except UnknownKeyName:
-      return  # Param unknown in dev environment
+    # BluePilot: Refresh cached param periodically (~1s at 20fps)
+    self._blindspot_param_counter += 1
+    if self._blindspot_param_counter >= 60:
+      self._blindspot_param_counter = 0
+      try:
+        self._show_blindspot_overlay = self._blindspot_params.get_bool("ShowBlindspotOverlay")
+      except UnknownKeyName:
+        self._show_blindspot_overlay = False
+
+    if not self._show_blindspot_overlay:
+      return
 
     bp_ui_log.state("Blindspot", "param_enabled", True)
 

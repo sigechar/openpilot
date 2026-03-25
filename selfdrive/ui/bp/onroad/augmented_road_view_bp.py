@@ -70,6 +70,8 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
                                 if isinstance(raw_style, bytes) else str(raw_style).strip().lower())
     if self._hybrid_gauge_style not in ("flat", "arched"):
       self._hybrid_gauge_style = "flat"
+    # BluePilot: Cache param to avoid per-frame disk I/O (refreshed in existing 60-frame block)
+    self._hide_onroad_border = self._bp_params.get_bool("BPHideOnroadBorder")
 
   def update_fade_out_bottom_overlay(self, _content_rect):
     """BluePilot: Skip MICI fade overlay on TICI — causes unwanted black gradient at bottom."""
@@ -87,6 +89,7 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
     if self._param_counter >= 60:
       self._param_counter = 0
       self._show_confidence_ball = self._bp_params.get_bool("BPShowConfidenceBall")
+      self._hide_onroad_border = self._bp_params.get_bool("BPHideOnroadBorder")
       raw_style = self._bp_params.get("FordPrefHybridGaugeStyle") or b"flat"
       self._hybrid_gauge_style = (raw_style.decode("utf-8", errors="replace").strip("\x00").lower()
                                   if isinstance(raw_style, bytes) else str(raw_style).strip().lower())
@@ -204,7 +207,7 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
     rl.end_scissor_mode()
 
     # BluePilot: Conditionally draw border
-    if not self._bp_params.get_bool("BPHideOnroadBorder"):
+    if not self._hide_onroad_border:
       self._draw_border(rect)
 
     # Publish uiDebug

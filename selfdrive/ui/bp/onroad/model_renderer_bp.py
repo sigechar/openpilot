@@ -46,6 +46,9 @@ class ModelRendererBP(ModelRenderer):
     # BluePilot: Overlay size scale factor (read from param periodically)
     self._overlay_scale = 1.0
 
+    # BluePilot: Cache param to avoid per-frame disk I/O (refreshed in existing 60-frame block)
+    self.ford_overlay_enabled = self._bp_params.get_bool("FordPrefShowRadarLeadOverlay")
+
     # BluePilot: Lead position smoothing filters to reduce radar jitter
     dt = 1 / gui_app.target_fps
     self._lead_d_filters = [FirstOrderFilter(0, 0.4, dt, initialized=False),
@@ -86,6 +89,8 @@ class ModelRendererBP(ModelRenderer):
       except (TypeError, ValueError):
         size_val = 1
       self._overlay_scale = OVERLAY_SCALE_FACTORS.get(size_val, 1.0)
+      # BluePilot: Refresh cached param (avoids per-frame disk I/O)
+      self.ford_overlay_enabled = self._bp_params.get_bool("FordPrefShowRadarLeadOverlay")
     self._counter += 1
 
     if sm.updated['carParams']:
@@ -96,7 +101,6 @@ class ModelRendererBP(ModelRenderer):
     lead_one = radar_state.leadOne if radar_state else None
 
     # BluePilot: Ford radar overlay feature - show leads even without longitudinal control
-    self.ford_overlay_enabled = self._bp_params.get_bool("FordPrefShowRadarLeadOverlay")
     render_lead_indicator = (self._longitudinal_control or self.ford_overlay_enabled) and radar_state is not None
     bp_ui_log.state("ModelRenderer", "render_lead", render_lead_indicator)
 
