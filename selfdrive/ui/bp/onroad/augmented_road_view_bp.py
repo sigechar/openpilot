@@ -166,9 +166,8 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
     bp_ui_log.scissor("AugRoadView", "reset (defensive)")
     # Defensive: re-establish scissor before drawing driver state and battery. Some HUD widgets
     # (e.g. speed limit, brake status, unified gauge) can leave raylib state in a bad way on device,
-    # causing the bottom-left widgets to be clipped or not drawn. Resetting scissor to content_rect
-    # ensures DM and battery always render in the correct clip region.
-    rl.end_scissor_mode()
+    # causing the bottom-left widgets to be clipped or not drawn. Calling begin_scissor_mode again
+    # (without end first) flushes pending draws and resets the scissor rect in one GPU call instead of two.
     rl.begin_scissor_mode(
       int(self._content_rect.x),
       int(self._content_rect.y),
