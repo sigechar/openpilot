@@ -98,9 +98,10 @@ class FloatControlAction(ItemAction):
     # Add small padding around text
     value_width = value_text_width + 20
     
-    # Center the value area, with buttons positioned close to it
+    # Right-justify the controls (like toggle switches)
     total_width = total_button_space + value_width
-    start_x = rect.x + (rect.width - total_width) / 2
+    RIGHT_PADDING = 20
+    start_x = rect.x + rect.width - total_width - RIGHT_PADDING
     
     # Minus button on left
     minus_rect = rl.Rectangle(start_x, button_y, BUTTON_SIZE, BUTTON_SIZE)
@@ -146,7 +147,8 @@ class FloatControlAction(ItemAction):
     value_width = value_text_width + 20
     total_button_space = BUTTON_SIZE * 2 + BUTTON_SPACING * 2
     total_width = total_button_space + value_width
-    start_x = self._rect.x + (self._rect.width - total_width) / 2
+    RIGHT_PADDING = 20
+    start_x = self._rect.x + self._rect.width - total_width - RIGHT_PADDING
     
     minus_rect = rl.Rectangle(start_x, button_y, BUTTON_SIZE, BUTTON_SIZE)
     if rl.check_collision_point_rec(mouse_pos, minus_rect):
