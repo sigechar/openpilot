@@ -72,6 +72,10 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
       self._hybrid_gauge_style = "flat"
     # BluePilot: Cache param to avoid per-frame disk I/O (refreshed in existing 60-frame block)
     self._hide_onroad_border = self._bp_params.get_bool("BPHideOnroadBorder")
+    try:
+      self._cached_gauge_size = int(self._bp_params.get("FordPrefHybridDriveGaugeSize", return_default=True))
+    except (TypeError, ValueError):
+      self._cached_gauge_size = 2
 
   def update_fade_out_bottom_overlay(self, _content_rect):
     """BluePilot: Skip MICI fade overlay on TICI — causes unwanted black gradient at bottom."""
@@ -90,6 +94,10 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
       self._param_counter = 0
       self._show_confidence_ball = self._bp_params.get_bool("BPShowConfidenceBall")
       self._hide_onroad_border = self._bp_params.get_bool("BPHideOnroadBorder")
+      try:
+        self._cached_gauge_size = int(self._bp_params.get("FordPrefHybridDriveGaugeSize", return_default=True))
+      except (TypeError, ValueError):
+        self._cached_gauge_size = 2
       raw_style = self._bp_params.get("FordPrefHybridGaugeStyle") or b"flat"
       self._hybrid_gauge_style = (raw_style.decode("utf-8", errors="replace").strip("\x00").lower()
                                   if isinstance(raw_style, bytes) else str(raw_style).strip().lower())
@@ -244,11 +252,7 @@ class AugmentedRoadViewBP(AugmentedRoadView, BlindspotRendererMixin):
     if getattr(self, "_hybrid_gauge_style", "flat") == "arched":
       self._power_flow_gauge_arched._update_state()
       if self._power_flow_gauge_arched._should_render():
-        try:
-          gauge_size = int(self._bp_params.get("FordPrefHybridDriveGaugeSize", return_default=True))
-        except (TypeError, ValueError):
-          gauge_size = 2
-        gauge_size = min(max(gauge_size, 1), 2)  # 1 = small, 2 = large
+        gauge_size = min(max(self._cached_gauge_size, 1), 2)  # 1 = small, 2 = large
         arched_scale = 0.75 if gauge_size == 1 else 1.0
         return self._render_gauges_arched(content_rect, ball_offset, scale=arched_scale)
       # Powerflow off: fall through to flat path (flat battery)

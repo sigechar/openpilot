@@ -209,11 +209,13 @@ class TorqueBarRendererBP:
     # Arc geometry — offset/height scale with torque magnitude
     # BluePilot: Reduced max height vs upstream (56→28) for a subtler, less exaggerated look
     # at high torque. The bar grows slightly thicker but doesn't balloon.
-    torque_line_offset = np.interp(abs_torque, [0.5, 1.0], [22 * self._scale, 26 * self._scale])
-    torque_line_height = np.interp(abs_torque, [0.5, 1.0], [14 * self._scale, 28 * self._scale])
+    # Use simple lerp instead of np.interp for 2-point arrays (avoids numpy overhead)
+    t = max(0.0, min(1.0, (abs_torque - 0.5) * 2.0))  # Normalize [0.5, 1.0] → [0, 1]
+    torque_line_offset = (22 + t * 4) * self._scale
+    torque_line_height = (14 + t * 14) * self._scale
 
     # Background alpha varies with torque magnitude
-    bg_alpha = np.interp(abs_torque, [0.5, 1.0], [0.25, 0.5])
+    bg_alpha = 0.25 + t * 0.25
 
     # Colors depend on engagement status
     is_active = ui_state.status in (UIStatus.ENGAGED, UIStatus.LAT_ONLY)

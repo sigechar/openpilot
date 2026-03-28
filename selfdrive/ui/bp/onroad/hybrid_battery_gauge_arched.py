@@ -67,18 +67,25 @@ class HybridBatteryGaugeArched(Widget):
     self._scale = 1.0  # 0.75 small, 1.0 large (FordPrefHybridDriveGaugeSize)
     from openpilot.common.filter_simple import FirstOrderFilter
     self._soc_filter = FirstOrderFilter(50.0, 50.0, 1.0 / gui_app.target_fps * 10)
+    # BluePilot: Cache param to avoid per-frame disk I/O (refreshed every 60 frames)
+    self._battery_status_enabled = self._params.get_bool("FordPrefHybridBatteryStatus")
+    self._param_frame_counter = 60  # Force refresh on first update
 
   def set_scale(self, scale: float) -> None:
     """Set gauge scale (0.75 small, 1.0 large). View calls before render."""
     self._scale = max(0.5, min(1.0, scale))
 
   def _update_state(self):
+    self._param_frame_counter += 1
+    if self._param_frame_counter >= 60:
+      self._param_frame_counter = 0
+      self._battery_status_enabled = self._params.get_bool("FordPrefHybridBatteryStatus")
     battery_data = self._get_battery_data()
     if battery_data is not None:
       self._soc_filter.update(battery_data['soc'])
 
   def _should_render(self) -> bool:
-    if not self._params.get_bool("FordPrefHybridBatteryStatus"):
+    if not self._battery_status_enabled:
       return False
     sm = ui_state.sm
     try:

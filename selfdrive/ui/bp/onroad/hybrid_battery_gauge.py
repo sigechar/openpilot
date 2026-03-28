@@ -80,12 +80,15 @@ class HybridBatteryGauge(Widget):
     # Gauge size param
     self._gauge_size = 1
     self._param_frame_counter = PARAM_REFRESH_FRAMES
+    # BluePilot: Cache param to avoid per-frame disk I/O (refreshed every 60 frames)
+    self._battery_status_enabled = self._params.get_bool("FordPrefHybridBatteryStatus")
 
   def _update_state(self):
     """Update battery state and animate SOC changes"""
     self._param_frame_counter += 1
     if self._param_frame_counter >= PARAM_REFRESH_FRAMES:
       self._param_frame_counter = 0
+      self._battery_status_enabled = self._params.get_bool("FordPrefHybridBatteryStatus")
       try:
         self._gauge_size = int(self._params.get("FordPrefHybridDriveGaugeSize", return_default=True))
       except (TypeError, ValueError):
@@ -97,8 +100,7 @@ class HybridBatteryGauge(Widget):
 
   def _should_render(self) -> bool:
     """Check if battery gauge should be rendered"""
-    battery_status_enabled = self._params.get_bool("FordPrefHybridBatteryStatus")
-    if not battery_status_enabled:
+    if not self._battery_status_enabled:
       bp_ui_log.visibility("HybridBattery", False, reason="param_disabled")
       return False
 

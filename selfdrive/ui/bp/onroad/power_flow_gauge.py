@@ -91,6 +91,8 @@ class PowerFlowGauge(Widget):
     self._power_flow_mode_value = 0
     self._engine_on_reason_value = 0
     self._threshold = 0.0
+    self._cached_is_ev = False
+    self._cached_is_hybrid = False
 
     # Params
     self._powerflow_enabled = False
@@ -112,6 +114,10 @@ class PowerFlowGauge(Widget):
       self._threshold = hd.throttleThresholdPercent
       self._power_flow_mode_value = hd.powerFlowModeValue
       self._engine_on_reason_value = hd.engineOnReasonValue
+      # Cache mode flags to avoid per-frame string lookups
+      text = get_hev_power_flow_text(self._power_flow_mode_value)
+      self._cached_is_ev = "Electric" in text if text else False
+      self._cached_is_hybrid = "Hybrid" in text if text else False
       self._update_bracket_animation(normalized, self._threshold)
     except (KeyError, AttributeError, TypeError):
       self._power_flow_mode_value = 0
@@ -476,12 +482,10 @@ class PowerFlowGauge(Widget):
   # --- Helpers ---
 
   def _is_ev_mode(self) -> bool:
-    text = get_hev_power_flow_text(self._power_flow_mode_value)
-    return "Electric" in text if text else False
+    return self._cached_is_ev
 
   def _is_hybrid_mode(self) -> bool:
-    text = get_hev_power_flow_text(self._power_flow_mode_value)
-    return "Hybrid" in text if text else False
+    return self._cached_is_hybrid
 
   def _get_demand_color(self, value: float, is_ev: bool) -> rl.Color:
     """Get color for positive demand bar."""

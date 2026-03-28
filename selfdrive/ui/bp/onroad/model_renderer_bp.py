@@ -212,41 +212,38 @@ class ModelRendererBP(ModelRenderer):
 
     self._apply_smooth_path()
 
+  # Pre-computed Gaussian kernel weights for spatial smoothing (exp(-0.5 * j^2) for j=-2..2)
+  _GAUSS_KERNEL = np.array([np.exp(-0.5 * j * j) for j in range(-2, 3)], dtype=np.float32)
+
   def _apply_smooth_path(self):
     """Apply Gaussian-weighted spatial smoothing with temporal damping to reduce path sway."""
     if self._path.projected_points.size == 0:
       return
 
-    if len(self._path.projected_points) < 4:
+    n = len(self._path.projected_points)
+    if n < 4:
       self._previous_path_projected_points = self._path.projected_points.copy()
       return
 
-    n = len(self._path.projected_points)
-    smoothed = np.zeros_like(self._path.projected_points)
+    smoothed = self._path.projected_points.copy()
 
-    for i in range(n):
-      pt = self._path.projected_points[i].copy()
-      if 1 < i < n - 1:
-        y_smooth = 0.0
-        weight_sum = 0.0
-        for j in range(-2, 3):
-          idx = i + j
-          if 0 <= idx < n:
-            weight = np.exp(-0.5 * j * j)
-            y_smooth += self._path.projected_points[idx][1] * weight
-            weight_sum += weight
-        if weight_sum > 0:
-          pt[1] = y_smooth / weight_sum
-      smoothed[i] = pt
+    # Vectorized Gaussian smoothing of y-coordinates for interior points
+    y = self._path.projected_points[:, 1]
+    kernel = self._GAUSS_KERNEL
+    # np.convolve with 'same' mode applies the kernel across all points; we only use interior results
+    conv = np.convolve(y, kernel, mode='same')
+    # Weight sums vary at edges; compute them the same way
+    ones = np.ones(n, dtype=np.float32)
+    weight_sums = np.convolve(ones, kernel, mode='same')
+    # Apply only to interior points (indices 2..n-2)
+    smoothed[2:n-1, 1] = conv[2:n-1] / weight_sums[2:n-1]
 
+    # Vectorized temporal damping
     if (self._previous_path_projected_points.size > 0 and
-        len(self._previous_path_projected_points) == len(smoothed)):
+        len(self._previous_path_projected_points) == n):
       damping = self._path_smoothing_damping
-      for i in range(len(smoothed)):
-        y_diff = smoothed[i][1] - self._previous_path_projected_points[i][1]
-        smoothed[i][1] = self._previous_path_projected_points[i][1] + y_diff * (1.0 - damping)
-    else:
-      self._previous_path_projected_points = smoothed.copy()
+      smoothed[:, 1] = self._previous_path_projected_points[:, 1] + \
+        (smoothed[:, 1] - self._previous_path_projected_points[:, 1]) * (1.0 - damping)
 
     self._previous_path_projected_points = smoothed.copy()
     self._path.projected_points = smoothed
@@ -299,10 +296,10 @@ class ModelRendererBP(ModelRenderer):
     self._draw_road_edge_glow_effects()
 
   def _draw_lane_glow_effects(self):
-    """Draw glow effects around lane lines with confidence-based brightness."""
-    glow_widths = [20.0, 12.0, 6.0]
-    glow_alphas = [0.05, 0.10, 0.20]
+    """Draw single glow layer around lane lines with confidence-based brightness.
 
+    Reduced from 3 layers to 1 for performance (saves ~8 draw_polygon + _expand_polygon calls/frame).
+    """
     for i, lane_line in enumerate(self._lane_lines):
       if lane_line.projected_points.size == 0 or self._lane_line_probs[i] < 0.4:
         continue
@@ -311,30 +308,28 @@ class ModelRendererBP(ModelRenderer):
       if not is_current_lane:
         base_alpha *= 0.4
       base_color = self._get_ll_color(float(self._lane_line_probs[i]), is_current_lane)
-      for glow_width, glow_alpha in zip(glow_widths, glow_alphas):
-        expanded_points = self._expand_polygon(lane_line.projected_points, glow_width)
-        if expanded_points.size > 0:
-          alpha = int(base_alpha * glow_alpha * 255)
-          color = rl.Color(base_color.r, base_color.g, base_color.b, alpha)
-          draw_polygon(self._rect, expanded_points, color)
+      expanded_points = self._expand_polygon(lane_line.projected_points, 12.0)
+      if expanded_points.size > 0:
+        alpha = int(base_alpha * 0.12 * 255)
+        color = rl.Color(base_color.r, base_color.g, base_color.b, alpha)
+        draw_polygon(self._rect, expanded_points, color)
 
   def _draw_road_edge_glow_effects(self):
-    """Draw glow effects around road edges."""
-    glow_widths = [28.0, 18.0, 10.0]
-    glow_alphas = [0.03, 0.07, 0.15]
+    """Draw single glow layer around road edges.
 
+    Reduced from 3 layers to 1 for performance (saves ~4 draw_polygon + _expand_polygon calls/frame).
+    """
     for i, road_edge in enumerate(self._road_edges):
       if road_edge.projected_points.size == 0:
         continue
       edge_alpha = np.clip(1.0 - self._road_edge_stds[i], 0.0, 1.0)
       if edge_alpha < 0.3:
         continue
-      for glow_width, glow_alpha in zip(glow_widths, glow_alphas):
-        expanded_points = self._expand_polygon(road_edge.projected_points, glow_width)
-        if expanded_points.size > 0:
-          alpha = int(edge_alpha * glow_alpha * 255)
-          color = rl.Color(255, 0, 0, alpha)
-          draw_polygon(self._rect, expanded_points, color)
+      expanded_points = self._expand_polygon(road_edge.projected_points, 18.0)
+      if expanded_points.size > 0:
+        alpha = int(edge_alpha * 0.08 * 255)
+        color = rl.Color(255, 0, 0, alpha)
+        draw_polygon(self._rect, expanded_points, color)
 
   def _expand_polygon(self, points: np.ndarray, width: float) -> np.ndarray:
     """Expand ribbon polygon outward for glow effect, tapering at ends.
@@ -350,10 +345,10 @@ class ModelRendererBP(ModelRenderer):
     n = len(points)
     half = n // 2
 
-    # Compute local ribbon width at each paired left/right vertex
-    local_widths = np.empty(half, dtype=np.float32)
-    for i in range(half):
-      local_widths[i] = np.linalg.norm(points[n - 1 - i] - points[i])
+    # Vectorized local ribbon widths
+    left = points[:half]
+    right = points[n - 1:n - 1 - half:-1]  # reversed right side
+    local_widths = np.linalg.norm(right - left, axis=1)
 
     max_width = np.max(local_widths)
     if max_width < 1e-6:
@@ -361,35 +356,35 @@ class ModelRendererBP(ModelRenderer):
 
     # Per-vertex scale: proportional to local ribbon width
     scales = np.empty(n, dtype=np.float32)
-    for i in range(half):
-      s = local_widths[i] / max_width
-      scales[i] = s          # left-side vertex
-      scales[n - 1 - i] = s  # corresponding right-side vertex
+    s = local_widths / max_width
+    scales[:half] = s
+    scales[n - 1:n - 1 - half:-1] = s
 
-    expanded = []
-    for i in range(n):
-      prev_idx = (i - 1) % n
-      next_idx = (i + 1) % n
-      p_prev = points[prev_idx]
-      p_curr = points[i]
-      p_next = points[next_idx]
-      edge1 = p_curr - p_prev
-      edge2 = p_next - p_curr
-      len1 = np.linalg.norm(edge1)
-      len2 = np.linalg.norm(edge2)
-      if len1 > 1e-6:
-        edge1 = edge1 / len1
-      if len2 > 1e-6:
-        edge2 = edge2 / len2
-      normal1 = np.array([-edge1[1], edge1[0]])
-      normal2 = np.array([-edge2[1], edge2[0]])
-      normal = (normal1 + normal2) / 2.0
-      normal_len = np.linalg.norm(normal)
-      if normal_len > 1e-6:
-        normal = normal / normal_len
-      expanded.append(p_curr + normal * width * scales[i])
+    # Vectorized edge and normal computation
+    prev_idx = np.arange(n) - 1
+    prev_idx[0] = n - 1
+    next_idx = np.arange(n) + 1
+    next_idx[-1] = 0
 
-    return np.array(expanded, dtype=np.float32)
+    edge1 = points - points[prev_idx]  # (n, 2)
+    edge2 = points[next_idx] - points  # (n, 2)
+
+    len1 = np.linalg.norm(edge1, axis=1, keepdims=True)
+    len2 = np.linalg.norm(edge2, axis=1, keepdims=True)
+    len1 = np.where(len1 < 1e-6, 1.0, len1)
+    len2 = np.where(len2 < 1e-6, 1.0, len2)
+    edge1 = edge1 / len1
+    edge2 = edge2 / len2
+
+    # Normals: rotate edges 90 degrees ([-y, x])
+    normal1 = np.stack([-edge1[:, 1], edge1[:, 0]], axis=1)
+    normal2 = np.stack([-edge2[:, 1], edge2[:, 0]], axis=1)
+    normal = (normal1 + normal2) * 0.5
+    normal_len = np.linalg.norm(normal, axis=1, keepdims=True)
+    normal_len = np.where(normal_len < 1e-6, 1.0, normal_len)
+    normal = normal / normal_len
+
+    return (points + normal * (width * scales)[:, None]).astype(np.float32)
 
   def _draw_path(self, sm):
     """Draw path with status-colored edges."""
@@ -402,7 +397,10 @@ class ModelRendererBP(ModelRenderer):
     self._draw_path_edges()
 
   def _draw_path_edges(self):
-    """Draw path edges (left, right, and front) with status-based colors."""
+    """Draw path edges (left, right, and front) with status-based colors.
+
+    Uses rl.draw_line_strip for batched line rendering instead of individual draw_line_ex calls.
+    """
     if not self._path.projected_points.size:
       return
 
@@ -417,26 +415,52 @@ class ModelRendererBP(ModelRenderer):
 
     edge_color = LANE_LINE_COLORS_BP.get(ui_state.status, LANE_LINE_COLORS_BP[UIStatus.DISENGAGED])
 
-    for i in range(len(left_edge) - 1):
-      rl.draw_line_ex(
-        rl.Vector2(left_edge[i][0], left_edge[i][1]),
-        rl.Vector2(left_edge[i + 1][0], left_edge[i + 1][1]),
-        4.0, edge_color
-      )
+    # Convert each polyline edge into a thin ribbon polygon (2 draw_polygon calls vs ~65 draw_line_ex).
+    # This preserves the ~4px visual thickness while batching into 2 GPU calls.
+    half_w = 2.0  # Half of the 4px line thickness
+    for edge_pts in (left_edge, right_edge):
+      if len(edge_pts) < 2:
+        continue
+      # Offset each point perpendicular to its segment to form a ribbon
+      ribbon = self._line_to_ribbon(edge_pts, half_w)
+      if ribbon.size > 0:
+        draw_polygon(self._rect, ribbon, edge_color)
 
-    for i in range(len(right_edge) - 1):
-      rl.draw_line_ex(
-        rl.Vector2(right_edge[i][0], right_edge[i][1]),
-        rl.Vector2(right_edge[i + 1][0], right_edge[i + 1][1]),
-        4.0, edge_color
-      )
-
+    # Front connecting line (single call)
     if len(left_edge) > 0 and len(right_edge) > 0:
       rl.draw_line_ex(
-        rl.Vector2(left_edge[-1][0], left_edge[-1][1]),
-        rl.Vector2(right_edge[-1][0], right_edge[-1][1]),
+        rl.Vector2(float(left_edge[-1][0]), float(left_edge[-1][1])),
+        rl.Vector2(float(right_edge[-1][0]), float(right_edge[-1][1])),
         4.0, edge_color
       )
+
+  @staticmethod
+  def _line_to_ribbon(pts: np.ndarray, half_w: float) -> np.ndarray:
+    """Convert a polyline into a ribbon polygon of given half-width.
+
+    Returns points in [L0..Ln, Rn..R0] order suitable for draw_polygon.
+    """
+    n = len(pts)
+    if n < 2:
+      return np.empty((0, 2), dtype=np.float32)
+    # Compute segment directions
+    diffs = np.diff(pts, axis=0)  # (n-1, 2)
+    lengths = np.linalg.norm(diffs, axis=1, keepdims=True)
+    lengths = np.where(lengths < 1e-6, 1.0, lengths)
+    dirs = diffs / lengths
+    # Per-vertex normals: average of adjacent segment normals
+    normals = np.empty((n, 2), dtype=np.float32)
+    seg_normals = np.stack([-dirs[:, 1], dirs[:, 0]], axis=1)  # rotate 90°
+    normals[0] = seg_normals[0]
+    normals[-1] = seg_normals[-1]
+    normals[1:-1] = (seg_normals[:-1] + seg_normals[1:]) * 0.5
+    nlen = np.linalg.norm(normals, axis=1, keepdims=True)
+    nlen = np.where(nlen < 1e-6, 1.0, nlen)
+    normals = normals / nlen
+    # Build ribbon: left side then right side reversed
+    left = pts + normals * half_w
+    right = pts - normals * half_w
+    return np.vstack([left, right[::-1]]).astype(np.float32)
 
   def _draw_lead_indicator(self):
     """Draw lead vehicles with dynamic colors based on detection source (radar vs vision)."""

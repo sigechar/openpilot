@@ -1,5 +1,5 @@
 import time
-import numpy as np
+import math
 import pyray as rl
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
@@ -73,7 +73,7 @@ class BlindspotRendererMixin:
     h = int(rect.height)
 
     # Calculate brightness pulse: smooth sine wave from 0.3 (dim) to 1.0 (bright)
-    brightness_pulse = 0.3 + 0.7 * (0.5 + 0.5 * np.sin(pulse_phase * 2 * np.pi))
+    brightness_pulse = 0.3 + 0.7 * (0.5 + 0.5 * math.sin(pulse_phase * 2 * math.pi))
 
     # Draw left edge red gradient indicator with brightness pulse
     if self._blindspot_left_alpha_filter.x > 0.01:
