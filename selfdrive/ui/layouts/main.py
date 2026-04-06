@@ -22,6 +22,8 @@ if is_bluepilot():
 
 if gui_app.sunnypilot_ui():
   from openpilot.selfdrive.ui.sunnypilot.layouts.settings.settings import SettingsLayoutSP as SettingsLayout
+  from openpilot.selfdrive.ui.layouts.settings import settings as _settings_module
+  PanelType = _settings_module.PanelType
 
 
 class MainState(IntEnum):
