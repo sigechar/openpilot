@@ -45,9 +45,12 @@ BUTTONS = [
 CURVATURE_MAX = 0.02
 
 # BluePilot: Curvature rate limits — 3-point breakpoints for smoother lateral control.
-# Upstream sunnypilot uses 2-point ([5, 25]) with more conservative values.
+# Upstream opendbc uses 2-point ([5, 25]) with more conservative values.
 # These allow higher rates at low speed for responsiveness, lower rates at mid-speed
 # for comfort, and very low rates at highway speed for stability.
+#
+# Keep in sync with opendbc/safety/modes/ford.h (FORD_LIMITS angle_rate_*_lookup) and
+# opendbc/safety/tests/test_ford.py (ANGLE_RATE_*). CarControllerParams.ANGLE_LIMITS imports this.
 BP_ANGLE_LIMITS = AngleSteeringLimits(
   0.02,  # Max curvature for steering command, m^-1
   ([5, 16, 25], [0.0025, 0.0012, 0.00008]),   # up (windup) rate limits

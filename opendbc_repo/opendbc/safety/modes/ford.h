@@ -86,8 +86,8 @@ static bool ford_get_quality_flag_valid(const CANPacket_t *msg) {
 
 #define FORD_CANFD_INACTIVE_CURVATURE_RATE 1024U
 
-// Control signal limits — must match opendbc/car/ford/values.py CarControllerParams.ANGLE_LIMITS
-// (STEER_ANGLE_MAX 0.02 m^-1) and opendbc/safety/tests/test_ford.py MAX_CURVATURE.
+// Control signal limits — curvature magnitude must match MAX_CURVATURE; rate tables must match
+// opendbc/sunnypilot/car/ford/values_ext.py BP_ANGLE_LIMITS (FORD_LIMITS macro below).
 #define FORD_CURVATURE_MIN -0.02f
 #define FORD_CURVATURE_MAX 0.02f
 #define FORD_CURVATURE_RATE_MIN -0.001024f
@@ -105,12 +105,12 @@ static bool ford_get_quality_flag_valid(const CANPacket_t *msg) {
   .angle_deg_to_can = 50000,  /* 1 / (2e-5) rad to can */                                       \
   .max_angle_error = 100,     /* 0.002 * FORD_STEERING_LIMITS.angle_deg_to_can */               \
   .angle_rate_up_lookup = {                                                                     \
-    {5., 25., 25.},                                                                             \
-    {0.00045f, 0.0001f, 0.0001f}                                                                \
+    {5., 16., 25.},                                                                             \
+    {0.0025f, 0.0012f, 0.00008f}                                                                \
   },                                                                                            \
   .angle_rate_down_lookup = {                                                                   \
-    {5., 25., 25.},                                                                             \
-    {0.00045f, 0.00015f, 0.00015f}                                                              \
+    {5., 16., 25.},                                                                             \
+    {0.0025f, 0.0014f, 0.00018f}                                                                \
   },                                                                                            \
                                                                                                 \
   /* no blending at low speed due to lack of torque wind-up and inaccurate current curvature */ \

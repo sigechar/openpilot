@@ -151,7 +151,8 @@ class LateralExt:
     self.pre_lane_change_values = {'path_angle': 0.0, 'path_offset': 0.0, 'desired_curvature_rate': 0.0}
     self.max_path_angle_change = 0.00125
     self.max_path_offset_change = 0.00125
-    self.max_curvature_rate_change = 0.0001
+    # Lane-change smoothing for curvature_rate; keep >= tightest BP unwind step (0.00018 at 25 m/s)
+    self.max_curvature_rate_change = 0.00025
 
     # Human turn detection
     self.human_turn = False

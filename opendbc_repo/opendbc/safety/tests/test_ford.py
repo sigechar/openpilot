@@ -81,9 +81,10 @@ class TestFordSafetyBase(common.CarSafetyTest):
   MAX_CURVATURE_ERROR = 0.002
   CURVATURE_ERROR_MIN_SPEED = 10.0  # m/s
 
-  ANGLE_RATE_BP = [5., 25., 25.]
-  ANGLE_RATE_UP = [0.00045, 0.0001, 0.0001]  # windup limit
-  ANGLE_RATE_DOWN = [0.00045, 0.00015, 0.00015]  # unwind limit
+  # Must match opendbc/sunnypilot/car/ford/values_ext.py BP_ANGLE_LIMITS and ford.h FORD_LIMITS
+  ANGLE_RATE_BP = [5., 16., 25.]
+  ANGLE_RATE_UP = [0.0025, 0.0012, 0.00008]  # windup limit
+  ANGLE_RATE_DOWN = [0.0025, 0.0014, 0.00018]  # unwind limit
 
   cnt_speed = 0
   cnt_speed_2 = 0
