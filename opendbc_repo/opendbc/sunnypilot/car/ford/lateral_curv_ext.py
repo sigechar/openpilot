@@ -22,20 +22,17 @@ import numpy as np
 from numpy import clip, interp
 
 from common.pid import PIDController
-from opendbc.car import DT_CTRL
-from opendbc.car.lateral import apply_std_steer_angle_limits
+from opendbc.car import ACCELERATION_DUE_TO_GRAVITY, DT_CTRL
+from opendbc.car.lateral import ISO_LATERAL_ACCEL, apply_std_steer_angle_limits
 from opendbc.car.vehicle_model import VehicleModel
 from opendbc.car.ford.values import CarControllerParams, FordFlags
 from opendbc.sunnypilot.car.ford.values_ext import CURVATURE_MAX
 from selfdrive.modeld.constants import ModelConstants
 
 
-# BluePilot: local override for ISO lateral accel limit
-# Stock uses the imported value from opendbc.car.lateral (~3.0 m/s^2)
-ISO_LATERAL_ACCEL = 3.0  # m/s^2
-EARTH_G = 9.81
+# CAN FD lateral-accel cap (match opendbc/car/ford/carcontroller.py apply_ford_curvature_limits)
 AVERAGE_ROAD_ROLL = 0.06  # ~3.4 degrees, 6% superelevation
-MAX_LATERAL_ACCEL = ISO_LATERAL_ACCEL - (EARTH_G * AVERAGE_ROAD_ROLL)  # ~2.4 m/s^2
+MAX_LATERAL_ACCEL = ISO_LATERAL_ACCEL - (ACCELERATION_DUE_TO_GRAVITY * AVERAGE_ROAD_ROLL)
 
 
 # Result namedtuple returned by LateralCurvExt.update()
@@ -54,7 +51,7 @@ def apply_ford_curvature_limits_ext(apply_curvature, apply_curvature_last, curre
                                      v_ego_raw, steering_angle, lat_active, CP):
   """Extended version of apply_ford_curvature_limits that returns (apply_curvature, max_curvature).
 
-  The max_curvature value is used by calculate_lateral_uncertainty() for the steering
+  The max_curvature value is used by _calculate_lateral_uncertainty() for the steering
   torque bar visualization. Stock version returns only apply_curvature.
   """
   max_curvature = 1  # large initial value
@@ -65,12 +62,14 @@ def apply_ford_curvature_limits_ext(apply_curvature, apply_curvature_last, curre
                               current_curvature + CarControllerParams.CURVATURE_ERROR)
     max_curvature = abs(current_curvature) + CarControllerParams.CURVATURE_ERROR
 
-  # Curvature rate limit after driver torque limit
-  apply_curvature = apply_std_steer_angle_limits(apply_curvature, apply_curvature_last, v_ego_raw,
+  # Curvature rate limit after driver torque limit (same inputs/order as apply_ford_curvature_limits)
+  apply_curvature_before_std = apply_curvature
+  apply_curvature = apply_std_steer_angle_limits(apply_curvature_before_std, apply_curvature_last, v_ego_raw,
                                                   steering_angle, lat_active, CarControllerParams.ANGLE_LIMITS)
 
-  # Compute max_curvature from rate limits (mirrors internal logic of apply_std_steer_angle_limits)
-  steer_up = apply_curvature_last * apply_curvature >= 0. and abs(apply_curvature) > abs(apply_curvature_last)
+  # Max one-step envelope for UI: steer_up must use pre-limit curvature (see apply_std_steer_angle_limits)
+  steer_up = (apply_curvature_last * apply_curvature_before_std >= 0.0
+              and abs(apply_curvature_before_std) > abs(apply_curvature_last))
   rate_limits = CarControllerParams.ANGLE_LIMITS.ANGLE_RATE_LIMIT_UP if steer_up else CarControllerParams.ANGLE_LIMITS.ANGLE_RATE_LIMIT_DOWN
   std_steer_angle_rate_limit = np.interp(v_ego_raw, rate_limits[0], rate_limits[1])
   std_steer_angle_limit = abs(apply_curvature_last) + abs(std_steer_angle_rate_limit)
@@ -135,7 +134,7 @@ class LateralCurvExt:
     self.pre_lane_change_values = {'path_angle': 0.0, 'path_offset': 0.0, 'desired_curvature_rate': 0.0}
     self.max_path_angle_change = 0.00125
     self.max_path_offset_change = 0.00125
-    # Lane-change smoothing for curvature_rate; keep >= tightest BP unwind step (0.00018 at 25 m/s)
+    # Lane-change smoothing for curvature_rate; keep >= tightest BP rate step (0.00008 at 25 m/s)
     self.max_curvature_rate_change = 0.00025
 
     # Human turn detection
@@ -307,7 +306,10 @@ class LateralCurvExt:
       # Lateral uncertainty for torque bar visualization
       lateralUncertainty = self._calculate_lateral_uncertainty(requested_curvature, apply_curvature, max_curvature)
 
-      # Reset curvature after limits applied
+      # Human turn / standstill reset: after apply_ford_curvature_limits_ext (for torque-bar max_curvature),
+      # force κ=0 and (below) path_angle=0 on the bus. ford.h reset latch treats desired_curvature==0 &&
+      # desired_path_angle==0 as the neutral reset frame and clears rate violations for that TX, then
+      # holds ~3s bypass (see ford.h reset_bypass_latch_counter on LateralMotionControl / LateralMotionControl2).
       if reset_steering == 1:
         apply_curvature = 0.0
         self.post_reset_ramp_active = False

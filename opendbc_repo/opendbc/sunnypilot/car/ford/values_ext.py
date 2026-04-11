@@ -51,10 +51,12 @@ CURVATURE_MAX = 0.02
 #
 # Keep in sync with opendbc/safety/modes/ford.h (FORD_LIMITS angle_rate_*_lookup) and
 # opendbc/safety/tests/test_ford.py (ANGLE_RATE_*). CarControllerParams.ANGLE_LIMITS imports this.
+# Up and down use the same table (symmetric limits; ford.h down matches up for the same reason).
+_BP_ANGLE_RATE = ([5, 16, 25], [0.0025, 0.0012, 0.00008])
 BP_ANGLE_LIMITS = AngleSteeringLimits(
   0.02,  # Max curvature for steering command, m^-1
-  ([5, 16, 25], [0.0025, 0.0012, 0.00008]),   # up (windup) rate limits
-  ([5, 16, 25], [0.0025, 0.0014, 0.00018]),   # down (unwind) rate limits
+  _BP_ANGLE_RATE,
+  _BP_ANGLE_RATE,
 )
 
 

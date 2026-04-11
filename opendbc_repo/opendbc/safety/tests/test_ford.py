@@ -84,7 +84,7 @@ class TestFordSafetyBase(common.CarSafetyTest):
   # Must match opendbc/sunnypilot/car/ford/values_ext.py BP_ANGLE_LIMITS and ford.h FORD_LIMITS
   ANGLE_RATE_BP = [5., 16., 25.]
   ANGLE_RATE_UP = [0.0025, 0.0012, 0.00008]  # windup limit
-  ANGLE_RATE_DOWN = [0.0025, 0.0014, 0.00018]  # unwind limit
+  ANGLE_RATE_DOWN = [0.0025, 0.0012, 0.00008]  # same as UP (symmetric limits)
 
   cnt_speed = 0
   cnt_speed_2 = 0
