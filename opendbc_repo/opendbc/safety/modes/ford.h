@@ -104,13 +104,14 @@ static bool ford_get_quality_flag_valid(const CANPacket_t *msg) {
   .max_angle = 1000,          /* 0.02 curvature */                                              \
   .angle_deg_to_can = 50000,  /* 1 / (2e-5) rad to can */                                       \
   .max_angle_error = 100,     /* 0.002 * FORD_STEERING_LIMITS.angle_deg_to_can */               \
+  /* Looser symmetric ROCs (former down table); Python control uses stricter up row in values_ext */
   .angle_rate_up_lookup = {                                                                     \
     {5., 16., 25.},                                                                             \
-    {0.0026f, 0.0013f, 0.0001f}                                                                \
+    {0.0025f, 0.0014f, 0.00018f}                                                                \
   },                                                                                            \
   .angle_rate_down_lookup = {                                                                   \
     {5., 16., 25.},                                                                             \
-    {0.0026f, 0.0015f, 0.0002f}                                                                \
+    {0.0025f, 0.0014f, 0.00018f}                                                                \
   },                                                                                            \
                                                                                                 \
   /* no blending at low speed due to lack of torque wind-up and inaccurate current curvature */ \

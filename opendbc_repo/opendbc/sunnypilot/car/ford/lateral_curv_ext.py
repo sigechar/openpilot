@@ -34,6 +34,11 @@ from selfdrive.modeld.constants import ModelConstants
 AVERAGE_ROAD_ROLL = 0.06  # ~3.4 degrees, 6% superelevation
 MAX_LATERAL_ACCEL = ISO_LATERAL_ACCEL - (ACCELERATION_DUE_TO_GRAVITY * AVERAGE_ROAD_ROLL)
 
+# Human turn reset: require sustained hands-on + large angle (avoids reset on small wheel nudges in a curve)
+HUMAN_TURN_ANGLE_DEG = 45.0
+HUMAN_TURN_HOLD_S = 1.5
+_STEER_DT = CarControllerParams.STEER_STEP * DT_CTRL  # 20 Hz lateral tick
+
 
 # Result namedtuple returned by LateralCurvExt.update()
 LateralResult = namedtuple('LateralResult', [
@@ -139,6 +144,7 @@ class LateralCurvExt:
 
     # Human turn detection
     self.human_turn = False
+    self.human_turn_hold_timer_s = 0.0
     self.post_reset_ramp_active = False
     self.reset_steering_last = False
 
@@ -286,8 +292,14 @@ class LateralCurvExt:
           requested_curvature *= lane_change_factor
           self.precision_type = 0
 
-      # Human turn detection
-      self.human_turn = steeringPressed and abs(steeringAngleDeg_PV) > 45
+      # Human turn: steering pressed + |angle| > threshold continuously for HUMAN_TURN_HOLD_S (not just a nudge)
+      if not self.enable_human_turn_detection:
+        self.human_turn_hold_timer_s = 0.0
+      elif steeringPressed and abs(steeringAngleDeg_PV) > HUMAN_TURN_ANGLE_DEG:
+        self.human_turn_hold_timer_s += _STEER_DT
+      else:
+        self.human_turn_hold_timer_s = 0.0
+      self.human_turn = self.human_turn_hold_timer_s >= HUMAN_TURN_HOLD_S
 
       # Steering reset logic
       if (self.human_turn and self.enable_human_turn_detection) or (CS.out.vEgoRaw < 0.1):

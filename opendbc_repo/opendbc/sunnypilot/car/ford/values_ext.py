@@ -49,14 +49,16 @@ CURVATURE_MAX = 0.02
 # These allow higher rates at low speed for responsiveness, lower rates at mid-speed
 # for comfort, and very low rates at highway speed for stability.
 #
-# Keep in sync with opendbc/safety/modes/ford.h (FORD_LIMITS angle_rate_*_lookup) and
-# opendbc/safety/tests/test_ford.py (ANGLE_RATE_*). CarControllerParams.ANGLE_LIMITS imports this.
-# Up and down use the same table (symmetric limits; ford.h down matches up for the same reason).
-_BP_ANGLE_RATE = ([5, 16, 25], [0.0025, 0.0012, 0.00008])
+# Control (Python) uses stricter windup than unwind so OP stays inside panda when apply_std
+# picks the wrong table vs steer_angle_cmd_checks. Safety firmware uses looser symmetric ROCs
+# (former “down” table for both up/down) — see ford.h FORD_LIMITS.
+# Tests: test_ford.py ANGLE_RATE_* match ford.h, not the stricter BP_ANGLE_LIMITS up row.
+_BP_ANGLE_RATE_UP = ([5, 16, 25], [0.0025, 0.0012, 0.00008])
+_BP_ANGLE_RATE_DOWN = ([5, 16, 25], [0.0025, 0.0014, 0.00018])
 BP_ANGLE_LIMITS = AngleSteeringLimits(
   0.02,  # Max curvature for steering command, m^-1
-  _BP_ANGLE_RATE,
-  _BP_ANGLE_RATE,
+  _BP_ANGLE_RATE_UP,
+  _BP_ANGLE_RATE_DOWN,
 )
 
 
